@@ -16,6 +16,7 @@ class Student(object):
 
 class Studetns_DB(dict):
 
+
     def __setitem__(self, key, item):
         self.__dict__[key] = item
 
@@ -30,6 +31,7 @@ class Studetns_DB(dict):
 
     def new_elem(self, chat_id):
         self.__dict__[chat_id] = Student('', '', '', '', '', 0, 0)
+
 
     def save_to_file(self, chat_id):
         new_student = vars(self[chat_id])

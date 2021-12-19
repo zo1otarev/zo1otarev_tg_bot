@@ -3,13 +3,14 @@ import telebot
 import re
 import logging
 from flask import Flask, request
-from students_bd import Studetns_DB, Known_Users
+from students_bd import Studetns_DB, Known_Users, Student
 from clickup import clickup
 from config import TOKEN, COMMANDS
 from telebot import types
 
-bot = telebot.TeleBot(TOKEN)
+students = Studetns_DB()
 
+bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -61,23 +62,18 @@ def callback_inline(call):
                               text='Тогда ты можешь пройти регистрацию заново /reg')
 
 
-students = Studetns_DB()
-
-
 @bot.message_handler(commands=['reg'])
 def reg(message):
-    if message.text == '/reg':
-        bot.send_message(message.from_user.id, "Как тебя зовут?")
-        global students
-        students.new_elem(message.chat.id)
-        bot.register_next_step_handler(message, get_name)  # следующий шаг – функция get_name
-    else:
-        bot.send_message(message.from_user.id, 'Напиши /reg')
+    bot.send_message(message.from_user.id, "Как тебя зовут?")
+    global students
+    chat_id = message.chat.id
+    students[chat_id] = Student('', '', '', '', '', 0, 0)
+    bot.register_next_step_handler(message, get_name)  # следующий шаг – функция get_name
 
 
 def get_name(message):  # получаем фамилию
     global students
-    students[message.chat.id].name = message.text
+    students[message.chat.id] = Student(message.text, '', '', '', '', 0, 0)
     bot.send_message(message.chat.id, 'Какая у тебя фамилия?')
     bot.register_next_step_handler(message, get_surname)
 
@@ -163,7 +159,8 @@ def create_current_profiles(message):
     if re.match(r'https://app.clickup.com/24402514/v/li/[0,9]*', status[0]):
         list_id = re.sub(r'https://app.clickup.com/24402514/v/li/', '', status[0])
     else:
-        bot.send_message(message.chat.id, text="Ты ошибся. Введи скопированнаю (url-ссылку) твоего листа после комманды")
+        bot.send_message(message.chat.id,
+                         text="Ты ошибся. Введи скопированнаю (url-ссылку) твоего листа после комманды")
         return
 
     global students

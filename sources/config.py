@@ -9,6 +9,7 @@ COMMANDS = {  # command description used in the "help" command
 
 load_dotenv()
 TOKEN = str(os.getenv(key="TOKEN"))
+CLICKUP_TOKEN = str(os.getenv(key='CLICKUP_TOKEN'))
 
 FILE_NAME_STUDENTS = "../json/data.json"
 FILE_NAME_USERS = "../json/users.json"

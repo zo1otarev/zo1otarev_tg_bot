@@ -1,15 +1,14 @@
-import telebot
 import os
+import telebot
 import re
 import logging
 from flask import Flask, request
 from students_bd import Studetns_DB, Known_Users
+from clickup import clickup
 from config import TOKEN, COMMANDS
 from telebot import types
 
 bot = telebot.TeleBot(TOKEN)
-bot.enable_save_next_step_handlers(delay=2)
-bot.load_next_step_handlers()
 
 
 @bot.message_handler(commands=['start'])
@@ -51,7 +50,8 @@ def callback_inline(call):
     elif call.data == "no":
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                               text="Жаль, но ты это...")
-        bot.send_message(chat_id=call.message.chat.id, text='Просто напиши /reg , когда захочешь зарегистрироваться')
+        bot.send_message(chat_id=call.message.chat.id,
+                         text='Просто напиши /reg , когда захочешь зарегистрироваться')
     elif call.data == "approve":  # call.data это callback_data, которую мы указали при объявлении кнопки
         parse(call.message.chat.id)
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Запомню : )')
@@ -106,6 +106,11 @@ def get_grade(message):
     try:
         global students
         students[message.chat.id].grade = int(message.text)
+        if students[message.chat.id].grade > 5 or students[message.chat.id].grade < 1:
+            bot.send_message(message.from_user.id,
+                             'Вряд ли такая оценка может быть по пятибальной шкале. Введи еще раз')
+            bot.register_next_step_handler(message, get_grade)
+            return
     except Exception:
         bot.send_message(message.from_user.id, 'Введите еще раз, но цифрами, пожалуйста')
         bot.register_next_step_handler(message, get_grade)
@@ -141,10 +146,39 @@ def delete_anket(chat_id):
     del students[chat_id]
 
 
-@bot.message_handler(commands=['delete'])
-def delete(message):
-    pass
+def extract_arg(arg):
+    return arg.split()[1:]
 
+
+@bot.message_handler(commands=['create_current_profiles'])
+def create_current_profiles(message):
+    status = extract_arg(message.text)
+    list_id = ''
+    if not status:
+        bot.send_message(message.chat.id, text="Введи скопированнаю (url-ссылку) твоего листа после комманды")
+        return
+    if len(status) > 1:
+        bot.send_message(message.chat.id,
+                         text="Ну ты индеец, я балдею. Написал аргументов с горой после команды. Я взял первый из них как ссылку на твой лист")
+    if re.match(r'https://app.clickup.com/24402514/v/li/[0,9]*', status[0]):
+        list_id = re.sub(r'https://app.clickup.com/24402514/v/li/', '', status[0])
+    else:
+        bot.send_message(message.chat.id, text="Ты ошибся. Введи скопированнаю (url-ссылку) твоего листа после комманды")
+        return
+
+    global students
+    students.clear()
+    cl = clickup(list_id)
+    try:
+        text = cl.create_profiles()
+        bot.send_message(message.chat.id, text=text)
+    except Exception:
+        bot.send_message(message.chat.id, 'Ты ошибся, введи верную url-ccылку на лист, к которой у бота есть доступ')
+        return
+
+
+bot.enable_save_next_step_handlers(delay=2)
+bot.load_next_step_handlers()
 
 if "HEROKU" in list(os.environ.keys()):
     logger = telebot.logger

@@ -63,8 +63,10 @@ class Known_Users(dict):
         self['users'].append(chat_id)
         self['__meta__']['count'] += 1
         with open(FILE_NAME_USERS, 'w', encoding='utf-8') as jfile:
-            json.dump(self, jfile)
+            json.dump(self.__dict__, jfile)
 
     def load(self):
         with open(FILE_NAME_USERS, 'r', encoding='utf-8') as jfile:
             self.__dict__ = json.load(jfile)
+
+
